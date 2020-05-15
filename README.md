@@ -11,3 +11,13 @@ Run the following command from the command line
 ```{}first 
 
 ```
+
+## Sources
+
+[Dash-uber-rides-demo](https://dash-gallery.plotly.host/dash-uber-rides-demo/)
+
+[code Dash-uber-rides-demo](https://github.com/plotly/dash-sample-apps/blob/master/apps/dash-uber-rides-demo/app.py)
+
+[Dash-gas-oil](https://dash-gallery.plotly.host/dash-oil-gas-ternary/)
+
+[code Dash-gas-oil](https://github.com/plotly/dash-sample-apps/blob/master/apps/dash-oil-gas-ternary/app.py)
