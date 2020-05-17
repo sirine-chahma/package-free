@@ -87,6 +87,9 @@ app.layout = html.Div(
                 html.Div(
                     [dcc.Graph(id="map-graph")],
                 ),
+                html.Div(
+                    [dcc.Graph(id="rank-chart")],
+                ),
             ]
         )
     ]
@@ -152,6 +155,96 @@ def make_map_figure(shop_selector, open_days, food):
             zoom=10
         ),
     )
+    return fig
+
+
+# Update the ranking
+@app.callback(
+    Output("rank-chart", "figure"),
+    [
+        Input("shop_selector", "value"),
+        Input("open_days", "value"),
+        Input("food", "value"),
+        Input("importance_dropdown", "value")
+    ],
+)
+
+def make_ranking(shop_selector, open_days, food, importance):
+
+    if shop_selector == 'store':
+        df = loc_df[loc_df['shop'] == 1]
+    elif shop_selector == 'market':
+        df = loc_df[loc_df['shop'] == 0]
+    else:
+        df = loc_df
+
+    #Select only the stores that are opened
+    open_days_str = list(map(lambda x: str(x), open_days))
+    df['is_open'] = list(map(lambda x: any(i in x for i in open_days_str), df['day']))
+    df = df[df['is_open']]
+
+    #Select only the stores with the food that we want
+    if not type(food) == type(None):
+        #counts contains the number of aliment in food that each store has
+        counts = pd.DataFrame(food_df[food_df['food'].isin(list(food))]['id'].value_counts())
+        #we only keep the store having all the aliments we are looking for
+        loc_select = df[df['id'].isin(counts[counts['id'] == len(list(food))].index)]
+        food_select = food_df[food_df['id'].isin(counts[counts['id'] == len(list(food))].index)]
+        # only keep the aliments that we want
+        food_select = food_select[food_select['food'].isin(list(food))]
+    else:
+        loc_select = df
+        food_select = food_df
+
+    #lists to store the final price/distance for each store id
+    name = []
+    price = []
+
+    gb = food_select.groupby(['Name'])
+    group_id = list(set(df['Name']))
+    for gr in group_id:
+        name.append(gr)
+        my_gr = gb.get_group(gr)
+        if importance == 'low':
+            price.append(my_gr['min_price'].mean())
+        elif importance == 'high':
+            price.append(my_gr['max_price'].mean())
+        else:
+            price.append(my_gr['avg_price'].mean())
+
+    results = pd.DataFrame({'Name': name, 'price': price})
+    results.sort_values(['price'], ascending=False)
+
+    data = [
+        go.Scatter(
+            x=results['price'],
+            y=[loc_select.shape[0] - i for i in range(loc_select.shape[0])],
+            mode='markers',
+            marker=dict(color='red', size=10)
+        )
+    ]
+
+    # Use the 'shapes' attribute from the layout to draw the vertical lines
+    layout = go.Layout(
+        shapes=[dict(
+            type='line',
+            xref='x',
+            yref='y',
+            x0=0,
+            y0=loc_select.shape[0] - i,
+            x1=results['price'][i],
+            y1=loc_select.shape[0] - i,
+            line=dict(
+                color='grey',
+                width=3
+            )
+        ) for i in range(loc_select.shape[0])],
+        title='Lollipop Chart'
+    )
+
+    # Plot the chart
+    fig = go.Figure(data, layout)
+
     return fig
 
 

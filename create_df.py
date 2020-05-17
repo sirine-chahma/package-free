@@ -17,5 +17,5 @@ food_df = pd.DataFrame({'id': ['01', 'M01', '01'],
 food_df.to_csv('data/food.csv')
 
 
-counts = pd.DataFrame(food_df[food_df['food'].isin(['pasta', 'rice'])]['id'].value_counts())
-print(counts[counts['id']==2].index)
+
+print(food_df.groupby(['id']))
