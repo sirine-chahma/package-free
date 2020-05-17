@@ -19,14 +19,24 @@ token = "pk.eyJ1Ijoic2lyaW5lY2hhaG1hIiwiYSI6ImNrYTkycnRrNzBuZWgycnF2c2Z6OTJxcWci
 
 # import data
 loc_df = pd.read_csv('../data/loc.csv')
+food_df = pd.read_csv('../data/food.csv')
 
-days_option = [{'label': 'Monday', 'value': 0},
-               {'label': 'Tuesday', 'value': 1},
-               {'label': 'Wednesday', 'value': 2},
-               {'label': 'Thursday', 'value': 3},
-               {'label': 'Friday', 'value': 4},
-               {'label': 'Saturday', 'value': 5},
-               {'label': 'Sunday', 'value': 6}]
+days_option = [{'label': 'Monday', 'value': '0'},
+               {'label': 'Tuesday', 'value': '1'},
+               {'label': 'Wednesday', 'value': '2'},
+               {'label': 'Thursday', 'value': '3'},
+               {'label': 'Friday', 'value': '4'},
+               {'label': 'Saturday', 'value': '5'},
+               {'label': 'Sunday', 'value': '6'}]
+
+food_option = [{'label': 'Rice', 'value': 'rice'},
+               {'label': 'Pasta', 'value': 'pasta'},
+               {'label': 'Milk', 'value': 'milk'}]
+
+importance = [{'label': 'Lower price', 'value': 'low'},
+              {'label': 'Higher price', 'value': 'high'},
+              {'label': 'Average price', 'value': 'avg'},
+              {'label': 'Distance', 'value': 'dist'}]
 
 # layout of the app
 
@@ -56,6 +66,18 @@ app.layout = html.Div(
                             value=[i for i in range(7)],
                             className="dcc_control",
                         ),
+                        html.P("What would you like to buy?", className="control_label"),
+                        dcc.Dropdown(
+                            id="food",
+                            options=food_option,
+                            multi=True,
+                            className="dcc_control",
+                        ),
+                        dcc.Dropdown(
+                            id="importance_dropdown",
+                            options=importance,
+                            placeholder="Select the most important for you",
+                         ),
                     ]
                 ),
             ]
@@ -77,9 +99,10 @@ app.layout = html.Div(
     [
         Input("shop_selector", "value"),
         Input("open_days", "value"),
+        Input("food", "value"),
     ],
 )
-def make_map_figure(shop_selector, open_days):
+def make_map_figure(shop_selector, open_days, food):
     if shop_selector == 'store':
         df = loc_df[loc_df['shop'] == 1]
     elif shop_selector == 'market':
@@ -88,10 +111,16 @@ def make_map_figure(shop_selector, open_days):
         df = loc_df
 
     #Select only the stores that are opened
-    open_days_int = list(map(lambda x : int(x), open_days))
-    df['is_open'] = list(map(lambda x: not set(x).isdisjoint(open_days_int), df['day']))
-
+    open_days_str = list(map(lambda x: str(x), open_days))
+    df['is_open'] = list(map(lambda x: any(i in x for i in open_days_str), df['day']))
     df = df[df['is_open']]
+
+    #Select only the stores with the food that we want
+    if not type(food) == type(None):
+        #counts contains the number of aliment in food that each store has
+        counts = pd.DataFrame(food_df[food_df['food'].isin(list(food))]['id'].value_counts())
+        #we only keep the store having all the aliments we are looking for
+        df = df[df['id'].isin(counts[counts['id'] == len(list(food))].index)]
 
     gb = df.groupby(['shop'])
     group_name = list(set(df['shop']))
